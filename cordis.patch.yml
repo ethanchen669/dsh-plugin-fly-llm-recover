@@ -12,4 +12,4 @@
 # becomes a Host Loader entry, so its listener would never see the event.
 - insert:
     - id: fly-llm-recover
-      name: dsh-plugin-fly-llm-recover
+      name: '@dsh-fly/dsh-plugin-fly-llm-recover'
