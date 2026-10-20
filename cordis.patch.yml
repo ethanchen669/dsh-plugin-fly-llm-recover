@@ -1,0 +1,15 @@
+# DSH Fly llm-recover — one Host row, no browser half.
+#
+# The row listens on the `llm/stream` waterfall and rewrites one failure shape
+# back into the harness vocabulary: a model that writes its tool call as TEXT
+# (`<tool_call>{"name":"bash",…}</tool_call>` and friends) instead of emitting a
+# structured `function_call`. `dsh-agent-loop` executes tools from the assembled
+# message's `tool-call` blocks, so synthesising those chunks is enough — no
+# upstream patch, no adapter replacement.
+#
+# It must live on the Host plane: `llm/stream` is emitted by the Host's
+# `LlmRuntime`, and an agent-plane row (mounted per session by the preset) never
+# becomes a Host Loader entry, so its listener would never see the event.
+- insert:
+    - id: fly-llm-recover
+      name: dsh-plugin-fly-llm-recover

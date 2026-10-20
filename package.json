@@ -1,0 +1,59 @@
+{
+  "name": "@dsh-fly/dsh-plugin-fly-llm-recover",
+  "version": "0.1.0",
+  "description": "Recover tool calls a model wrote as TEXT (XML templates) back into structured tool-call chunks, on the harness llm/stream seam — no upstream patch",
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./recover": "./lib/recover.js",
+    "./stream": "./lib/stream.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "lib/recover.js",
+    "lib/stream.js",
+    "cordis.patch.yml"
+  ],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "tool-call",
+    "llm",
+    "recovery"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ethanchen669/dsh-plugin-fly-llm-recover.git"
+  },
+  "homepage": "https://github.com/ethanchen669/dsh-plugin-fly-llm-recover#readme",
+  "bugs": {
+    "url": "https://github.com/ethanchen669/dsh-plugin-fly-llm-recover/issues"
+  },
+  "meta": {
+    "title": "FLY LLM Recover",
+    "description": "把模型写在正文里的工具调用（XML 模板）还原成结构化调用：挂在 llm/stream 上，不换 adapter、不改上游。"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "test": "node --test tests/*.spec.mjs",
+    "verify": "node scripts/check-commit-identity.mjs --all && node --test tests/*.spec.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

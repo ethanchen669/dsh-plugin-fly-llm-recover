@@ -1,0 +1,45 @@
+# 推 tag 即发布（trusted publishing / OIDC）—— 不需要 Secret，也不需要 2FA 动态码。
+#
+# 前置（在 npm 网页上做一次）：该包 Settings → Trusted Publisher
+#   Publisher=GitHub Actions / owner=ethanchen669 / repo=dsh-plugin-fly-llm-recover / workflow=release.yml
+# 新包的**首次**发布通常还没有 Trusted Publisher 可配，需要本地 `npm login` 后先发 0.1.0，
+# 之后本 workflow 才接管（这一点与 dsh-plugin-fly-skins 的路径相同）。
+#
+# 注意：一个 step 里只能有一个 run；注释缩进必须与同级键对齐（YAML 缩进错了 =
+# "run 建出来了、但没有任何 job"）。
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: 装依赖
+        run: pnpm install --frozen-lockfile
+      - name: 全历史署名检查
+        run: node scripts/check-commit-identity.mjs --all
+      - name: 发布前先跑门禁
+        run: pnpm test
+      - name: npm 升到 11（trusted publishing 需要 npm >= 11.5）
+        run: |
+          npm install -g npm@11
+          npm --version
+      - name: 发布到公开 npm（OIDC + provenance）
+        run: npm publish --access public --provenance
