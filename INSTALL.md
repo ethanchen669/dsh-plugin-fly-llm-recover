@@ -52,7 +52,8 @@ open -a "DeepSeek Harness"
 
 ## 验证装上了没有
 
-`FLY_LLM_RECOVER_DEBUG=1` 启动进程，stderr 会出现两行：
+`FLY_LLM_RECOVER_DEBUG=1` 启动进程（或 `FLY_LLM_RECOVER_LOG=/tmp/recover.log` 落文件——
+**官方桌面版的 stderr 看不到**，必须用后者），会出现两行：
 
 ```
 fly-llm-recover: 已挂载（providers=全部，holdback=24）

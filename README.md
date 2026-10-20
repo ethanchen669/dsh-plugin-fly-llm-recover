@@ -47,8 +47,9 @@ message 里有没有 `tool-call` 块（`dsh-agent-loop/lib/index.js:1150-1156`�
 ```
 
 环境变量：`FLY_LLM_RECOVER=off` 关闭；`FLY_LLM_RECOVER_PROVIDERS=a,b` 收窄；
-`FLY_LLM_RECOVER_DEBUG=1` 往 stderr 打两行确凿回执 —— 挂载一行、每次命中 `llm/stream`
-一行（默认 logger 的 info 级会被吞掉，"这个钩子在真会话里到底跑没跑"只能靠它回答）。
+`FLY_LLM_RECOVER_DEBUG=1` 往 stderr 打确凿回执（挂载一行、每次命中 `llm/stream` 一行、
+每次还原一行）；`FLY_LLM_RECOVER_LOG=<文件>` 把同样三行**追加到文件**（带 ISO 时间戳）——
+官方桌面版把宿主子进程的 stderr 接走了，文件是那边唯一看得见的一路。
 
 ## 边界（实测）
 

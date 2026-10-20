@@ -205,3 +205,34 @@ test('行装配：providers 收窄后，别的 provider 一个字节都不动', 
   for await (const chunk of handler({ provider: 'other', model: 'm', tools: [{ name: 'bash' }] }, upstream)) out.push(chunk)
   assert.deepEqual(out, chunks, '收窄的 provider 名单没生效')
 })
+
+test('FLY_LLM_RECOVER_LOG：桌面版唯一看得见的那一路（挂载/命中/还原三行）', async () => {
+  const { mkdtempSync, readFileSync, rmSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const dir = mkdtempSync(join(tmpdir(), 'fly-llm-recover-log-'))
+  const file = join(dir, 'plugin.log')
+  const previous = { log: process.env.FLY_LLM_RECOVER_LOG, debug: process.env.FLY_LLM_RECOVER_DEBUG }
+  process.env.FLY_LLM_RECOVER_LOG = file
+  delete process.env.FLY_LLM_RECOVER_DEBUG
+  try {
+    const { apply } = await import('../index.js')
+    const handlers = new Map()
+    apply({ on: (event, handler) => handlers.set(event, handler), logger: { info: () => {} } }, {})
+    const handler = handlers.get('llm/stream')
+    async function* upstream() {
+      for (const chunk of textChunks('<tool_call>{"name":"bash","arguments":{"command":"ls /tmp"}}</tool_call>')) yield chunk
+    }
+    for await (const _ of handler({ provider: 'p', model: 'm', tools: [{ name: 'bash' }] }, upstream)) { /* 消费完 */ }
+    const lines = readFileSync(file, 'utf8').trim().split('\n')
+    assert.ok(lines.some(line => line.includes('已挂载')), `缺挂载行：${lines.join(' | ')}`)
+    assert.ok(lines.some(line => line.includes('命中 llm/stream')), `缺命中行：${lines.join(' | ')}`)
+    assert.ok(lines.some(line => line.includes('还原成结构化调用')), `缺还原行：${lines.join(' | ')}`)
+    assert.match(lines[0], /^\d{4}-\d\d-\d\dT/u, '每行要带 ISO 时间戳（桌面版跨重启对照用）')
+  } finally {
+    if (previous.log === undefined) delete process.env.FLY_LLM_RECOVER_LOG
+    else process.env.FLY_LLM_RECOVER_LOG = previous.log
+    if (previous.debug !== undefined) process.env.FLY_LLM_RECOVER_DEBUG = previous.debug
+    rmSync(dir, { recursive: true, force: true })
+  }
+})

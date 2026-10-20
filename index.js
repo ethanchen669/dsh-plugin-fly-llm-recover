@@ -23,6 +23,8 @@
  * @module dsh-plugin-fly-llm-recover
  */
 
+import { appendFileSync } from 'node:fs'
+
 import { recoverAssistantStream } from './lib/stream.js'
 
 /** Cordis 插件名，和 bundle patch 里的行 `name` 对齐。 */
@@ -70,18 +72,36 @@ function normalize(config) {
  */
 export function apply(ctx, config) {
   const settings = normalize(config)
+  const debug = process.env.FLY_LLM_RECOVER_DEBUG === '1'
+  const logFile = process.env.FLY_LLM_RECOVER_LOG
+  /**
+   * 一条回执同时走 stderr（本地终端）与文件（**官方桌面版**：Electron 把宿主子进程的
+   * stderr 接走了，终端上看不到任何东西 —— 没有文件这一路，那边"装没装上"无从判断）。
+   *
+   * @param message - 要落的那一行（前面会补 ISO 时间）。
+   */
+  const note = message => {
+    const line = `${new Date().toISOString()} ${message}`
+    if (typeof logFile === 'string' && logFile.length > 0) {
+      try {
+        appendFileSync(logFile, `${line}\n`)
+      } catch {
+        // 落盘失败不该影响转发：这条路只是观测
+      }
+    }
+    if (debug) console.error(line)
+  }
   if (!settings.enabled) {
     ctx.logger?.info?.('fly-llm-recover: 已关闭（FLY_LLM_RECOVER=off 或 enabled: false）')
     return
   }
 
   // 装没装上要能一眼看见：这个仓最常见的失败形状就是"门禁全绿、会话里没有这个包"。
-  const debug = process.env.FLY_LLM_RECOVER_DEBUG === '1'
   const mounted = `fly-llm-recover: 已挂载（providers=${settings.providers.length === 0 ? '全部' : settings.providers.join(',')}，holdback=${settings.holdback}）`
   ctx.logger?.info?.(mounted)
-  // 默认的 logger 级别可能把 info 吞掉；排障时用 `FLY_LLM_RECOVER_DEBUG=1` 拿到确凿的回执
-  // （挂载一行 + 每次命中 llm/stream 一行 —— 后者回答"这个钩子在真会话里到底跑没跑"）。
-  if (debug) console.error(mounted)
+  // 默认的 logger 级别会把 info 吞掉；排障用 FLY_LLM_RECOVER_DEBUG=1（stderr）或
+  // FLY_LLM_RECOVER_LOG=<文件>（桌面版唯一看得见的一路）。
+  note(mounted)
 
   ctx.on('llm/stream', (options, next) => {
     const provider = options?.provider
@@ -92,13 +112,15 @@ export function apply(ctx, config) {
     )
     // 本次请求没有提供任何工具：纯文本调用无处可还原，别去改写任何字节。
     if (toolNames.size === 0) return next()
-    if (debug) console.error(`fly-llm-recover: 命中 llm/stream（${provider}/${options.model}，${toolNames.size} 个工具）`)
+    note(`fly-llm-recover: 命中 llm/stream（${provider}/${options.model}，${toolNames.size} 个工具）`)
     return recoverAssistantStream(next(), {
       toolNames,
       holdback: settings.holdback,
       report: ({ calls }) => {
         const names = calls.map(call => call.name).join(', ')
-        ctx.logger?.info?.(`fly-llm-recover: ${provider}/${options.model} 把文本工具调用还原成结构化调用（${names}）`)
+        const message = `fly-llm-recover: ${provider}/${options.model} 把文本工具调用还原成结构化调用（${names}）`
+        ctx.logger?.info?.(message)
+        note(message)
       },
     })
   })
