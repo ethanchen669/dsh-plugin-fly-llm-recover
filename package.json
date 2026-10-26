@@ -42,7 +42,7 @@
     "description": "把模型写在正文里的工具调用（XML 模板）还原成结构化调用：挂在 llm/stream 上，不换 adapter、不改上游。"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-llm": "0.2.1-rc.2"
+    "@deepseek-ai/dsh-llm": "^0.2.1-rc.2"
   },
   "dsh": {
     "bundle": {
